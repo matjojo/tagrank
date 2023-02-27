@@ -1,0 +1,8 @@
+/.mypy_cache/
+/ACCESS_KEY
+/FILES_PATH
+/URL
+/ratings.json
+
+
+/.idea/*
