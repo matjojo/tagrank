@@ -9,7 +9,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import Qt
 from trueskill import Rating, rate  # type: ignore
 
-FILE_SEARCH_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 500"]
+DEFAULT_FILE_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 500"]
 
 FileMetaData = dict[str, Any]
 
@@ -225,11 +225,21 @@ def print_permissions_error_then_exit() -> NoReturn:
     sys.exit(1)
 
 
-def print_no_relevant_files_then_exit() -> NoReturn:
-    print(f"ERROR: Was not able to find any files in the client to compare.")
+def print_no_relevant_files_then_exit(query: list[str]) -> NoReturn:
+    print(f"ERROR: Was not able to find enough files in the client to compare.")
     print(f"  Are you sure I am allowed to search for files?")
-    print(f"  I am specifically searching for files that are found by searching for {', '.join(FILE_SEARCH_QUERY)}")
+    print(f"  I am specifically searching for files that are found by searching for the following query:")
+    print(f"  {', '.join(query)}")
+    print(f"  If this query looks weird, change it in the SEARCH_QUERY file.")
     sys.exit(0)
+
+
+def print_search_query_help():
+    print("The search query file (SEARCH_QUERY) has just been made, and populated with the default query.")
+    print("Every line of this file is used as one 'tag' to search your client.")
+    print("You can do quite advanced things with this search. See the API documentation for more info.")
+    print("https://hydrusnetwork.github.io/hydrus/developer_api.html#get_files_search_files")
+    print("Scroll down a little to the system predicated expando to see examples of system queries you can do.")
 
 
 def main():
@@ -287,16 +297,22 @@ def main():
         print(f"ERROR: the files path '{files_path}' is not a directory.")
         print_files_path_info_then_exit()
 
-    relevant_files_ids = client.search_files(FILE_SEARCH_QUERY, file_sort_type=hydrus_api.FileSortType.RANDOM)
-    if relevant_files_ids is None:
-        print_no_relevant_files_then_exit()
+    file_query_path = Path("./SEARCH_QUERY")
+    if not file_query_path.exists():
+        file_query_path.write_text("\n".join(DEFAULT_FILE_QUERY))
+        print_search_query_help()
+
+    query = list(filter(lambda s: s != "", file_query_path.read_text().splitlines()))
+
+    relevant_files_ids = client.search_files(query, file_sort_type=hydrus_api.FileSortType.RANDOM)
+    if relevant_files_ids is None or relevant_files_ids["file_ids"] is None or len(relevant_files_ids["file_ids"]) < 2:
+        print_no_relevant_files_then_exit(query)
 
     app = QtWidgets.QApplication(sys.argv)
     window = Window(RatingSystem(files_path, client, relevant_files_ids["file_ids"]))
     window.show()
     sys.exit(app.exec())
 
-    # TODO: Config for the query.
 
     # TODO: Choose files to play against each other. Maybe use some halfway point between high and low win prob?
     #       Or use files where win prob is ~50% so that we get "new" info
