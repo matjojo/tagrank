@@ -1,0 +1,32 @@
+# TagRank
+is a hydrus API script that uses trueskill to figure out which tags you like best.
+By making you choose which of two files you like more, over and over again, the trueskill system will figure out which tags you like most.
+It does this by employing the same ranking algorithm that Microsoft uses for its Xbox online games.
+
+TagRank will show you pairs of files, over and over again.
+The more comparisons you make the more it learns your preferences.
+You can stop at any time by pressing the ESCape key, your progress will be saved.
+Press the left arrow if you prefer the left image, the right arrow for the right, and the down arrow if there is no clear winner.
+
+
+TrueSkill uses these comparisons to create normal distributions for the "quality" of each tag, and a confidence score that says how sure it is of these results.
+TagRank that uses these results to create a representation of this data
+
+## Installation
+- Clone the repository.
+- make sure that you have python version 3.9 or higher installed.
+- install the requirements in requirements.txt using pip.
+- - For example, with `pip install requirements.txt`
+- - Or with `pip install requests PySide6 trueskill hydrus_api>=5.0.0`
+- Now you can run main.py.
+
+
+## Post-installation setup
+- TagRank has a small number of configuration files that it will guide you in creating.
+- Running main.py without setting up anything else will tell you what to do next.
+- In short, you need the following files in the working directory of this program.
+- - FILES_PATH: a file that contains the path to your client_files directory.
+- - ACCESS_KEY: a file that contains the hydrus API access key.
+- - URL: (optional) a file that contains the url that TagRank can access the hydrus API with.
+- - SEARCH_QUERY: (optional) a file that contains, line delimited, the search query that TagRank will use to find files to compare. If not provided it will be created and a default query will be inserted for you.
+- For all of the above it holds that just running main.py and letting it figure out what it needs from you is easier than trying to do it beforehand.
