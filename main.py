@@ -144,10 +144,10 @@ class Window(QtWidgets.QWidget):
             label.setMinimumWidth(500)
             label.setMinimumHeight(500)
 
-        self.perform_comparison_for_pair(self.rating_system.get_file_pair())
+        self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
 
 
-    def perform_comparison_for_pair(self, metadatas: Tuple[FileMetaData, FileMetaData] | None):
+    def store_metadata_and_show_images_for_comparison_pair(self, metadatas: Tuple[FileMetaData, FileMetaData] | None):
         if metadatas is None:
             print("Was, for any reason, not able to load a pair of files. Shutting down now.")
             self.quit()
@@ -160,6 +160,10 @@ class Window(QtWidgets.QWidget):
 
         self.leftImageLabel.setPixmap(QtGui.QPixmap(left_file_path).scaled(self.leftImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation))
         self.rightImageLabel.setPixmap(QtGui.QPixmap(right_file_path).scaled(self.rightImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation))
+
+
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        self.store_metadata_and_show_images_for_comparison_pair((self.left_file_metadata, self.right_file_metadata))
 
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
@@ -177,7 +181,7 @@ class Window(QtWidgets.QWidget):
         else: # ignore this event
             return
 
-        self.perform_comparison_for_pair(self.rating_system.get_file_pair())
+        self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
 
 
     def quit(self):
@@ -249,6 +253,7 @@ def print_empty_query_help_then_exit() -> NoReturn:
     print("If you want to return to the default search query delete the SEARCH_QUERY file.")
     print("It will be remade with the default query when you start this script again.")
     sys.exit(0)
+
 
 def main():
     key_path = Path("./ACCESS_KEY")
