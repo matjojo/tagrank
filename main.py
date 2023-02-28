@@ -18,6 +18,7 @@ class RatingSystem:
         self.files_path = files_path
         self.client = client
         self.file_ids = file_ids
+        self.used_file_pairs: set[tuple[int, int]] = set()
 
         self.current_ratings: dict[str, Rating] = {}
 
@@ -35,6 +36,17 @@ class RatingSystem:
 
     def get_file_pair(self) -> None | Tuple[FileMetaData, FileMetaData]:
         ids: list[int] = random.sample(self.file_ids, k=2)
+
+        tries = 0
+        while tuple(ids) in self.used_file_pairs:
+            if tries > 20:
+                print("Tried to find a new random file pair 20 times, did not succeed.")
+                return None
+            ids = random.sample(self.file_ids, k=2)
+            tries += 1
+
+        # mypy here does not know that this list of 2 ints turns into a tuple of 2 ints.
+        self.used_file_pairs.add(tuple(ids))  # type: ignore
 
         info = self.client.get_file_metadata(file_ids=ids)
         if info is None:
@@ -98,7 +110,6 @@ class RatingSystem:
                 if str(hydrus_api.TagStatus.PENDING.value) in repo["display_tags"]:
                     tags.update(repo["display_tags"][str(hydrus_api.TagStatus.PENDING)])
 
-        print(tags)
         # we need to go to list here since we need the ordering of this in keeping track of scores.
         return list(tags)
 
