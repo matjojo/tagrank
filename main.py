@@ -242,6 +242,14 @@ def print_search_query_help():
     print("Scroll down a little to the system predicated expando to see examples of system queries you can do.")
 
 
+def print_empty_query_help_then_exit() -> NoReturn:
+    print("ERROR: the file query is empty.")
+    print("Since this may lead to very large queries this is not allowed.")
+    print("If you really want the search to return all files, add 'system: everything' to the SEARCH_QUERY file.")
+    print("If you want to return to the default search query delete the SEARCH_QUERY file.")
+    print("It will be remade with the default query when you start this script again.")
+    sys.exit(0)
+
 def main():
     key_path = Path("./ACCESS_KEY")
     if not key_path.exists():
@@ -301,6 +309,9 @@ def main():
     if not file_query_path.exists():
         file_query_path.write_text("\n".join(DEFAULT_FILE_QUERY))
         print_search_query_help()
+
+    if file_query_path.read_text().strip() == "":
+        print_empty_query_help_then_exit()
 
     query = list(filter(lambda s: s != "", file_query_path.read_text().splitlines()))
 
