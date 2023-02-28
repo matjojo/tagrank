@@ -1,0 +1,4 @@
+requests
+PySide6
+trueskill
+hydrus_api>=5.0.0
