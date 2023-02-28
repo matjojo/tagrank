@@ -215,14 +215,14 @@ def print_verification_server_error_help_then_exit(e: None | hydrus_api.ServerEr
         print("  Read it all, but the last line is probably where you'll find what is wrong.")
         print("This is what the server told me:")
         print(e)
-    sys.exit(1)
+    sys.exit(0)
 
 
 def print_permissions_error_then_exit() -> NoReturn:
     print("ERROR: This access key is not allowed to search for and fetch files.")
     print("  Please allow this permission for the access key you put in the ACCESS_KEY file.")
     print("  You can find this setting at: services->review services->local->client api")
-    sys.exit(1)
+    sys.exit(0)
 
 
 def print_no_relevant_files_then_exit(query: list[str]) -> NoReturn:
