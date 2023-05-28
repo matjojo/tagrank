@@ -288,6 +288,8 @@ def main() -> None:
         print("ERROR: ACCESS_KEY file is empty.")
         print_access_key_info_then_exit()
 
+    access_key = access_key.removesuffix("\n")
+
     url_path = Path("./URL")
     if url_path.exists():
         url: str | None = url_path.read_text()
@@ -325,7 +327,12 @@ def main() -> None:
         print("ERROR: FILES_PATH file is empty.")
         print_files_path_info_then_exit()
 
-    files_path = Path(files_path_text)
+    clean_path_text = files_path_text.removesuffix("\n")
+    files_path = Path(clean_path_text)
+
+    if not clean_path_text.endswith("client_files"):
+        files_path = files_path / "client_files"
+
     if not files_path.exists():
         print(f"ERROR: The files path '{files_path}' does not exist.")
         print_files_path_info_then_exit()
