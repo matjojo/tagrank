@@ -10,14 +10,22 @@ Press the left arrow if you prefer the left image, the right arrow for the right
 
 
 TrueSkill uses these comparisons to create normal distributions for the "quality" of each tag, and a confidence score that says how sure it is of these results.
-TagRank that uses these results to create a representation of this data
+TagRank that uses these results to create a representation of this data.
+
+When you are done rating games TagRank will show you the top 20 tags and their skill distributions.
+The more to the right the distribution for a tag is the better, and the higher it is the more sure TagRank is of that ranking. 
+
+If you want to do more with this data you can read it from the `ratings.json` file that TagRank creates.
+This is a json list of `[tag_name, [mu, sigma]]` objects.
+`mu` and `sigma` are the parameters for the normal distribution of that tags ranking.
+
 
 ## Installation
 - Clone the repository.
 - make sure that you have python version 3.9 or higher installed.
 - install the requirements in requirements.txt using pip.
 - - For example, with `pip install requirements.txt`
-- - Or with `pip install requests PySide6 trueskill hydrus_api>=5.0.0`
+- - Or with `pip install requests requests PySide6 matplotlib numpy scipy trueskill hydrus_api>=5.0.0`
 - Now you can run main.py.
 
 

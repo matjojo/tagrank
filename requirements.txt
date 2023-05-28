@@ -1,4 +1,7 @@
 requests
 PySide6
+matplotlib
+numpy
+scipy
 trueskill
 hydrus_api>=5.0.0
