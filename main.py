@@ -7,11 +7,16 @@ from typing import Tuple, Any, NoReturn
 import hydrus_api  # type: ignore
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import Qt
+import matplotlib.pyplot as plt  # type: ignore
+import scipy.stats as stats  # type: ignore
 from trueskill import Rating, rate  # type: ignore
+import numpy as np
 
 DEFAULT_FILE_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 500"]
+AMOUNT_OF_TAGS_IN_CHARTS = 20
 
 FileMetaData = dict[str, Any]
+
 
 class RatingSystem:
     def __init__(self, files_path: Path, client: hydrus_api.Client, file_ids: list[int]):
@@ -28,11 +33,9 @@ class RatingSystem:
                 for tag, rating_params in tag_to_ratings:
                     self.current_ratings[tag] = Rating(rating_params[0], rating_params[1])
 
-
     def write_results_to_file(self):
         with open(Path("./ratings.json"), "w") as f:
             f.write(json.dumps([(tag, [rating.mu, rating.sigma]) for tag, rating in self.current_ratings.items()]))
-
 
     def get_file_pair(self) -> None | Tuple[FileMetaData, FileMetaData]:
         ids: list[int] = random.sample(self.file_ids, k=2)
@@ -69,20 +72,18 @@ class RatingSystem:
         # ignore the type here since mypy does not understand that we verified the type above.
         return tuple(metadata)  # type: ignore
 
-
     def path_from_metadata(self, file_1_metadata: FileMetaData) -> Path:
         file_hash = file_1_metadata["hash"]
         extension = file_1_metadata["ext"]
 
         return self.files_path / ("f" + file_hash[:2]) / (file_hash + extension)
 
-
     def process_result(self, *, winner: FileMetaData, loser: FileMetaData):
         winner_tags = self.tags_from_file(winner)
         loser_tags = self.tags_from_file(loser)
 
         winner_ratings = tuple([self.rating_for_tag(tag) for tag in winner_tags])
-        loser_ratings  = tuple([self.rating_for_tag(tag) for tag in loser_tags])
+        loser_ratings = tuple([self.rating_for_tag(tag) for tag in loser_tags])
 
         new_winner_ratings, new_loser_ratings = rate([winner_ratings, loser_ratings])
 
@@ -95,7 +96,6 @@ class RatingSystem:
 
         for tag, new_rating in zip(winner_tags, winner_ratings):
             self.current_ratings[tag] = new_rating
-
 
     # noinspection PyMethodMayBeStatic
     def tags_from_file(self, file: FileMetaData) -> list[str]:
@@ -112,7 +112,6 @@ class RatingSystem:
 
         # we need to go to list here since we need the ordering of this in keeping track of scores.
         return list(tags)
-
 
     def rating_for_tag(self, tag: str) -> Rating:
         if tag in self.current_ratings:
@@ -146,7 +145,6 @@ class Window(QtWidgets.QWidget):
 
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
 
-
     def store_metadata_and_show_images_for_comparison_pair(self, metadatas: Tuple[FileMetaData, FileMetaData] | None):
         if metadatas is None:
             print("Was, for any reason, not able to load a pair of files. Shutting down now.")
@@ -158,31 +156,32 @@ class Window(QtWidgets.QWidget):
         left_file_path = self.rating_system.path_from_metadata(self.left_file_metadata)
         right_file_path = self.rating_system.path_from_metadata(self.right_file_metadata)
 
-        self.leftImageLabel.setPixmap(QtGui.QPixmap(left_file_path).scaled(self.leftImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation))
-        self.rightImageLabel.setPixmap(QtGui.QPixmap(right_file_path).scaled(self.rightImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation))
-
+        self.leftImageLabel.setPixmap(
+            QtGui.QPixmap(left_file_path).scaled(self.leftImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                                                 Qt.TransformationMode.FastTransformation))
+        self.rightImageLabel.setPixmap(
+            QtGui.QPixmap(right_file_path).scaled(self.rightImageLabel.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                                                  Qt.TransformationMode.FastTransformation))
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         self.store_metadata_and_show_images_for_comparison_pair((self.left_file_metadata, self.right_file_metadata))
 
-
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         key = event.key()
         if key == QtCore.Qt.Key.Key_Left:
-            self.rating_system.process_result(winner = self.left_file_metadata, loser = self.right_file_metadata)
+            self.rating_system.process_result(winner=self.left_file_metadata, loser=self.right_file_metadata)
         elif key == QtCore.Qt.Key.Key_Right:
-            self.rating_system.process_result(winner = self.right_file_metadata, loser = self.left_file_metadata)
+            self.rating_system.process_result(winner=self.right_file_metadata, loser=self.left_file_metadata)
         elif key == QtCore.Qt.Key.Key_Down:
             # print("No clear winner.")
             pass
         elif key == QtCore.Qt.Key.Key_Escape:
             self.quit()
             return
-        else: # ignore this event
+        else:  # ignore this event
             return
 
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
-
 
     def quit(self):
         print("Saving results to file...")
@@ -222,6 +221,14 @@ def print_verification_server_error_help_then_exit(e: None | hydrus_api.ServerEr
     sys.exit(0)
 
 
+def print_connection_error_help_then_exit(e: hydrus_api.ConnectionError) -> NoReturn:
+    print("ERROR: Was not able to connect to hydrus.")
+    print("  Are you sure your hydrus client is on?")
+    print("  This is the error that caused the connection problem:")
+    print(e)
+    sys.exit(0)
+
+
 def print_permissions_error_then_exit() -> NoReturn:
     print("ERROR: This access key is not allowed to search for and fetch files.")
     print("  Please allow this permission for the access key you put in the ACCESS_KEY file.")
@@ -243,19 +250,19 @@ def print_search_query_help():
     print("Every line of this file is used as one 'tag' to search your client.")
     print("You can do quite advanced things with this search. See the API documentation for more info.")
     print("https://hydrusnetwork.github.io/hydrus/developer_api.html#get_files_search_files")
-    print("Scroll down a little to the system predicated expando to see examples of system queries you can do.")
+    print("Scroll down a little to the `system predicates` expando to see examples of system queries you can do.")
 
 
 def print_empty_query_help_then_exit() -> NoReturn:
     print("ERROR: the file query is empty.")
-    print("Since this may lead to very large queries this is not allowed.")
+    print("Since this may lead to very large queries, this is not allowed.")
     print("If you really want the search to return all files, add 'system: everything' to the SEARCH_QUERY file.")
     print("If you want to return to the default search query delete the SEARCH_QUERY file.")
     print("It will be remade with the default query when you start this script again.")
     sys.exit(0)
 
 
-def main():
+def main() -> None:
     key_path = Path("./ACCESS_KEY")
     if not key_path.exists():
         print("ERROR: ACCESS_KEY file does not exist.")
@@ -268,7 +275,7 @@ def main():
 
     url_path = Path("./URL")
     if url_path.exists():
-        url = url_path.read_text()
+        url: str | None = url_path.read_text()
         if url == "":
             url = None
     else:
@@ -284,6 +291,8 @@ def main():
         access_key_response = client.verify_access_key()
     except hydrus_api.ServerError as e:
         print_verification_server_error_help_then_exit(e)
+    except hydrus_api.ConnectionError as e:
+        print_connection_error_help_then_exit(e)
 
     if access_key_response is None:
         print_verification_server_error_help_then_exit()
@@ -325,19 +334,41 @@ def main():
         print_no_relevant_files_then_exit(query)
 
     app = QtWidgets.QApplication(sys.argv)
-    window = Window(RatingSystem(files_path, client, relevant_files_ids["file_ids"]))
-    window.show()
-    sys.exit(app.exec())
+    rating_system = RatingSystem(files_path, client, relevant_files_ids["file_ids"])
+    window: QtWidgets.QWidget = Window(rating_system)
 
+    window.show()
+    first_section_result = app.exec()
+    if first_section_result != 0:
+        print("Comparison app closed in error. Not moving on to comparisons.")
+        sys.exit(first_section_result)
+    window.destroy()
+
+    # somehow mypy does not understand the generics involved in the sorted call.
+    # noinspection PyTypeChecker
+    best_tags: list[Tuple[str, Rating]] = sorted(rating_system.current_ratings.items(), key=lambda x: x[1].mu)[
+                                          :AMOUNT_OF_TAGS_IN_CHARTS]
+
+    # reverse here since matplotlib places the first line at the bottom of the legend, and we want the best at the top.
+    for (tag, (mu, sigma)) in reversed(best_tags):
+        x_space = np.linspace(mu - 3 * sigma, mu + 3 * sigma, 100)
+        y_space = stats.norm.pdf(x_space, mu, sigma)
+        plt.plot(
+            x_space,
+            y_space,
+            label=f"{tag} (score:{mu:.2f})"
+        )
+
+    plt.legend()  # show a legend
+    plt.show()
 
     # TODO: Choose files to play against each other. Maybe use some halfway point between high and low win prob?
     #       Or use files where win prob is ~50% so that we get "new" info
 
     # TODO: Test between (not) including duplicate tags in the scoring.
-    #       How does this affect the scoring tags? Will super common tags stay in the middle since they aren't played very often?
+    #       How does this affect the scoring tags?
+    #       Will super common tags stay in the middle since they aren't played very often?
     #       Maybe this will happen regardless since they win and loose as commonly.
-
-    # TODO: Make nice matplotlib chart of scores?
 
 
 if __name__ == "__main__":

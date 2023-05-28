@@ -21,7 +21,7 @@ This is a json list of `[tag_name, [mu, sigma]]` objects.
 
 
 ## Installation
-- Clone the repository.
+- Clone the repository or download the repository in another way.
 - make sure that you have python version 3.9 or higher installed.
 - install the requirements in requirements.txt using pip.
 - - For example, with `pip install requirements.txt`
