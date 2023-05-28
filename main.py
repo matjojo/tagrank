@@ -195,8 +195,12 @@ def print_access_key_info_then_exit() -> NoReturn:
     print("  You can blacklist any tags you want, but they won't get ranked if this program cannot see them.")
     print("  When you have done this. Place the access key in a file called 'ACCESS_KEY' in the same folder as the main.py file.")
     print("  Then exit these windows by pressing apply.")
-    print("  Now you need to start the api via the services->manage services->double click 'client api'->un-select 'do not run client api service'.")
-    print("  Then exit these windows by pressing apply.")
+    print()
+
+    print("  Now you need to turn on the client API.")
+    print_enable_client_api_help()
+
+    print()
     print("  If you have a non-standard URL or PORT you can place the url in a file called URL in the same folder as the main.py file.")
     print("  It should roughly follow the format of 'http://127.0.0.1:45869/'.")
     sys.exit(0)
@@ -207,6 +211,11 @@ def print_files_path_info_then_exit() -> NoReturn:
     print("  The content of the file must be the full path to the folder in your hydrus installation that ends in client_files.")
     print("  It can for example look like this: '/home/user/Hydrus Network/db/client_files'.")
     print("  Or, on windows: 'C:\\Users\\user\\Hydrus Network\\db\\client_files'.")
+    print()
+    print("  The hydrus client can tell you where the files are by going to:")
+    print("  Help -> About -> Description")
+    print("  Then, somewhere near the bottom it says 'db dir: <PATH HERE>'.")
+    print("  This is the exact path you should place in the FILES_PATH file.")
     sys.exit(0)
 
 
@@ -224,10 +233,16 @@ def print_verification_server_error_help_then_exit(e: None | hydrus_api.ServerEr
 def print_connection_error_help_then_exit(e: hydrus_api.ConnectionError) -> NoReturn:
     print("ERROR: Was not able to connect to hydrus.")
     print("  Are you sure your hydrus client is on?")
+    print("  If it is, ensure that the API itself is on.")
+    print_enable_client_api_help()
     print("  This is the error that caused the connection problem:")
     print(e)
     sys.exit(0)
 
+def print_enable_client_api_help():
+    print("  Go to Services -> Manage Services -> (double click) client api.")
+    print("  Then ensure that the 'run the client api?' tick-box is on.")
+    print("  Exit these windows by pressing apply.")
 
 def print_permissions_error_then_exit() -> NoReturn:
     print("ERROR: This access key is not allowed to search for and fetch files.")
