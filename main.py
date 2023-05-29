@@ -12,7 +12,7 @@ import scipy.stats as stats  # type: ignore
 from trueskill import Rating, rate  # type: ignore
 import numpy as np
 
-DEFAULT_FILE_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 500"]
+DEFAULT_FILE_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 5000"]
 AMOUNT_OF_TAGS_IN_CHARTS = 20
 
 FileMetaData = dict[str, Any]
@@ -359,6 +359,16 @@ def main() -> None:
 
     if file_query_path.read_text().strip() == "":
         print_empty_query_help_then_exit()
+
+
+    if file_query_path.read_text().strip() == """
+system:number of tags > 5
+system:filetype = image
+system:limit = 500""".strip():
+        print("You where using the previous default file_query. It has been updated to the following:")
+        print("\n".join(DEFAULT_FILE_QUERY))
+        file_query_path.write_text("\n".join(DEFAULT_FILE_QUERY))
+
 
     query = list(filter(lambda s: s != "", file_query_path.read_text().splitlines()))
 
