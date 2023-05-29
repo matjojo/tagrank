@@ -239,15 +239,21 @@ def print_connection_error_help_then_exit(e: hydrus_api.ConnectionError) -> NoRe
     print(e)
     sys.exit(0)
 
+
 def print_enable_client_api_help():
     print("  Go to Services -> Manage Services -> (double click) client api.")
     print("  Then ensure that the 'run the client api?' tick-box is on.")
     print("  Exit these windows by pressing apply.")
 
-def print_permissions_error_then_exit() -> NoReturn:
+
+def print_permissions_error_then_exit(e: (hydrus_api.InsufficientAccess | None) = None) -> NoReturn:
     print("ERROR: This access key is not allowed to search for and fetch files.")
     print("  Please allow this permission for the access key you put in the ACCESS_KEY file.")
     print("  You can find this setting at: services->review services->local->client api")
+    print()
+    if e is not None:
+        print("We know this because the client returned the following error: ")
+        print(e)
     sys.exit(0)
 
 
@@ -310,12 +316,14 @@ def main() -> None:
         print_verification_server_error_help_then_exit(e)
     except hydrus_api.ConnectionError as e:
         print_connection_error_help_then_exit(e)
+    except hydrus_api.InsufficientAccess as e:
+        print_permissions_error_then_exit(e)
 
     if access_key_response is None:
         print_verification_server_error_help_then_exit()
 
     if 3 not in access_key_response["basic_permissions"]:
-        print_permissions_error_then_exit()
+        print_permissions_error_then_exit(None)
 
     files_path_path = Path("./FILES_PATH")
     if not files_path_path.exists():
