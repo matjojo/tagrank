@@ -85,7 +85,8 @@ class RatingSystem:
         winner_ratings = tuple([self.rating_for_tag(tag) for tag in winner_tags])
         loser_ratings = tuple([self.rating_for_tag(tag) for tag in loser_tags])
 
-        new_winner_ratings, new_loser_ratings = rate([winner_ratings, loser_ratings])
+        # lower rank is better.
+        new_winner_ratings, new_loser_ratings = rate([winner_ratings, loser_ratings], ranks=[0,1])
 
         # first process loser then process winner, so that the tags that are in both images get the props for winning.
         # We may want to experiment with only updating tags that are not on both images?
