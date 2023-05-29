@@ -327,15 +327,18 @@ def main() -> None:
         print("ERROR: FILES_PATH file is empty.")
         print_files_path_info_then_exit()
 
-    clean_path_text = files_path_text.removesuffix("\n")
+    clean_path_text = files_path_text.removesuffix("\n").removesuffix("\\").removesuffix("/")
+
     files_path = Path(clean_path_text)
 
-    if not clean_path_text.endswith("client_files"):
-        files_path = files_path / "client_files"
-
     if not files_path.exists():
-        print(f"ERROR: The files path '{files_path}' does not exist.")
-        print_files_path_info_then_exit()
+        # files path does not exist. Did the user forgot this postfix?
+        if not clean_path_text.endswith("client_files"):
+            files_path = files_path / "client_files"
+
+        if not files_path.exists():
+            print(f"ERROR: The files path '{Path(clean_path_text).resolve()}' does not exist.")
+            print_files_path_info_then_exit()
 
     if not files_path.is_dir():
         print(f"ERROR: the files path '{files_path}' is not a directory.")
