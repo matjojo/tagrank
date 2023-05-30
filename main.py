@@ -1,4 +1,5 @@
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -340,6 +341,10 @@ def print_empty_query_help_then_exit() -> NoReturn:
     sys.exit(0)
 
 
+def trueskill_number_from_rating(rating: Rating) -> float:
+    return rating.mu - (3*rating.sigma)
+
+
 def main() -> None:
     key_path = Path("./ACCESS_KEY")
     if not key_path.exists():
@@ -445,19 +450,26 @@ system:limit = 500""".strip():
         sys.exit(first_section_result)
     window.destroy()
 
-    # somehow mypy does not understand the generics involved in the sorted call.
-    # noinspection PyTypeChecker
-    best_tags: list[Tuple[str, Rating]] = sorted(rating_system.current_ratings.items(), key=lambda x: x[1].mu)[
-                                          :AMOUNT_OF_TAGS_IN_CHARTS]
+    many_tags: list[Tuple[str, Rating]] = sorted(rating_system.current_ratings.items(),
+                                                 key=lambda x: trueskill_number_from_rating(x[1]),
+                                                 reverse=True)[:max(100, AMOUNT_OF_TAGS_IN_CHARTS)]
 
-    # reverse here since matplotlib places the first line at the bottom of the legend, and we want the best at the top.
-    for (tag, (mu, sigma)) in reversed(best_tags):
+    largest_mu_width = len(str(math.floor(trueskill_number_from_rating(many_tags[0][1]))))
+    print("The window that shows the scores can be hard to read. So here the data in text for 100 tags:")
+    for (tag, rating) in many_tags:
+                                                                # +3 for the three decimals
+        print(f"{trueskill_number_from_rating(rating):.3f}".rjust(largest_mu_width+3) + f": {tag}")
+
+    best_tags: list[Tuple[str, Rating]] = many_tags[:AMOUNT_OF_TAGS_IN_CHARTS]
+
+    for (tag, rating) in best_tags:
+        (mu, sigma) = rating
         x_space = np.linspace(mu - 3 * sigma, mu + 3 * sigma, 100)
         y_space = stats.norm.pdf(x_space, mu, sigma)
         plt.plot(
             x_space,
             y_space,
-            label=f"{tag} (score:{mu:.2f})"
+            label=f"{tag} (score:{trueskill_number_from_rating(rating):.2f})"
         )
 
     plt.legend()  # show a legend
