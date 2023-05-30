@@ -340,12 +340,13 @@ def main() -> None:
 
     files_path = Path(clean_path_text)
 
-    if not files_path.exists():
+    # "f00" is one of the folders that the files are actually in.
+    if not (files_path / "f00").exists():
         # files path does not exist. Did the user forgot this postfix?
         if not clean_path_text.endswith("client_files"):
             files_path = files_path / "client_files"
 
-        if not files_path.exists():
+        if not (files_path / "f00").exists():
             print(f"ERROR: The files path '{Path(clean_path_text).resolve()}' does not exist.")
             print_files_path_info_then_exit()
 
