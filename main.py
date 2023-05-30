@@ -110,7 +110,7 @@ class RatingSystem:
             go_back_ratings[tag] = self.current_ratings[tag]
             self.current_ratings[tag] = new_rating
 
-        for tag, new_rating in zip(winner_tags, winner_ratings):
+        for tag, new_rating in zip(winner_tags, new_winner_ratings):
             if tag not in loser_tags:  # otherwise we'd take the newly set value from the loser update here.
                 go_back_ratings[tag] = self.current_ratings[tag]
             self.current_ratings[tag] = new_rating
@@ -222,6 +222,8 @@ class Window(QtWidgets.QWidget):
             self.rating_system.process_result(winner=self.right_file_metadata, loser=self.left_file_metadata)
         elif key == QtCore.Qt.Key.Key_Down:
             # print("No clear winner.")
+            # TODO: Maybe we want to process draws as well? (TrueSkill supports that.)
+            #       How does that influence the data?
             pass
         elif key == QtCore.Qt.Key.Key_Escape:
             self.quit()
