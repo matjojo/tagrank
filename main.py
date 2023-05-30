@@ -33,6 +33,17 @@ class RatingSystem:
                 for tag, rating_params in tag_to_ratings:
                     self.current_ratings[tag] = Rating(rating_params[0], rating_params[1])
 
+        self.go_back_ratings_stack: list[dict[str, Rating]] = []
+
+    def process_undo(self):
+        try:
+            last_ratings = self.go_back_ratings_stack.pop()
+        except IndexError:
+            return  # nothing to return to.
+
+        for (tag, rating) in last_ratings.items():
+            self.current_ratings[tag] = rating
+
     def write_results_to_file(self):
         with open(Path("./ratings.json"), "w") as f:
             f.write(json.dumps([(tag, [rating.mu, rating.sigma]) for tag, rating in self.current_ratings.items()]))
@@ -50,22 +61,24 @@ class RatingSystem:
 
         # mypy here does not know that this list of 2 ints turns into a tuple of 2 ints.
         self.used_file_pairs.add(tuple(ids))  # type: ignore
+        return self.convert_image_ids_to_file_meta_data(tuple(ids))  # type: ignore
 
-        info = self.client.get_file_metadata(file_ids=ids)
+    def convert_image_ids_to_file_meta_data(self, pairs: Tuple[int, int]) -> None | Tuple[FileMetaData, FileMetaData]:
+        info = self.client.get_file_metadata(file_ids=pairs)
         if info is None:
-            print(f"ERROR: Was not able to find the file metadata objects for ids '{ids}'.")
+            print(f"ERROR: Was not able to find the file metadata objects for ids '{pairs}'.")
             return None
 
         metadata = info["metadata"]
         if metadata is None:
-            print(f"ERROR: The metadata object for the file pair '{ids}' is None! (Maybe this script need to be updated?)")
+            print(f"ERROR: The metadata object for the file pair '{pairs}' is None! (Maybe this script need to be updated?)")
             return None
         if not isinstance(metadata, list):
-            print(f"ERROR: The metadata object for the file pair '{ids}' is not a list! (Maybe this script needs to be updated?)")
+            print(f"ERROR: The metadata object for the file pair '{pairs}' is not a list! (Maybe this script needs to be updated?)")
             print(f"  This is what I did get: {metadata}")
             return None
         if len(metadata) != 2:
-            print(f"ERROR: Did not get two metadata objects for the file pairs '{ids}'.")
+            print(f"ERROR: Did not get two metadata objects for the file pairs '{pairs}'.")
             print(f"  This is what I did get: {metadata}")
             return None
 
@@ -86,17 +99,23 @@ class RatingSystem:
         loser_ratings = tuple([self.rating_for_tag(tag) for tag in loser_tags])
 
         # lower rank is better.
-        new_winner_ratings, new_loser_ratings = rate([winner_ratings, loser_ratings], ranks=[0,1])
+        new_winner_ratings, new_loser_ratings = rate([winner_ratings, loser_ratings], ranks=[0, 1])
 
         # first process loser then process winner, so that the tags that are in both images get the props for winning.
         # We may want to experiment with only updating tags that are not on both images?
         # though the issue there is that super common tags like 1girl would almost never get rated.
         # and you may also get super weird ratings for tags that are barely ever used.
+        go_back_ratings: dict[str, Rating] = dict()
         for tag, new_rating in zip(loser_tags, new_loser_ratings):
+            go_back_ratings[tag] = self.current_ratings[tag]
             self.current_ratings[tag] = new_rating
 
         for tag, new_rating in zip(winner_tags, winner_ratings):
+            if tag not in loser_tags:  # otherwise we'd take the newly set value from the loser update here.
+                go_back_ratings[tag] = self.current_ratings[tag]
             self.current_ratings[tag] = new_rating
+
+        self.go_back_ratings_stack.append(go_back_ratings)
 
     # noinspection PyMethodMayBeStatic
     def tags_from_file(self, file: FileMetaData) -> list[str]:
@@ -115,10 +134,10 @@ class RatingSystem:
         return list(tags)
 
     def rating_for_tag(self, tag: str) -> Rating:
-        if tag in self.current_ratings:
-            return self.current_ratings[tag]
+        if tag not in self.current_ratings:
+            self.current_ratings[tag] = Rating()
 
-        return Rating()
+        return self.current_ratings[tag]
 
 
 class Window(QtWidgets.QWidget):
@@ -130,6 +149,8 @@ class Window(QtWidgets.QWidget):
         self.right_file_metadata: FileMetaData = {}
 
         self.rating_system: RatingSystem = rating_system
+
+        self.go_back_image_pairs_stack: list[Tuple[int, int]] = []
 
         self.setWindowTitle("TagRank")
         self.setLayout(QtWidgets.QHBoxLayout())
@@ -145,6 +166,12 @@ class Window(QtWidgets.QWidget):
             label.setMinimumHeight(500)
 
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
+
+    def store_image_pair_onto_undo_stack(self, left_metadata: FileMetaData, right_metadata: FileMetaData):
+        left_id = left_metadata["file_id"]
+        right_id = right_metadata["file_id"]
+
+        self.go_back_image_pairs_stack.append((left_id, right_id))
 
     def store_metadata_and_show_images_for_comparison_pair(self, metadatas: Tuple[FileMetaData, FileMetaData] | None):
         if metadatas is None:
@@ -167,6 +194,19 @@ class Window(QtWidgets.QWidget):
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         self.store_metadata_and_show_images_for_comparison_pair((self.left_file_metadata, self.right_file_metadata))
 
+    def process_undo(self):
+        try:
+            image_ids = self.go_back_image_pairs_stack.pop()
+        except IndexError:
+            return  # nothing to go back to
+
+        # we don't want to store metadata objects as they are quite large. So we as the client for them again.
+        meta_datas = self.rating_system.convert_image_ids_to_file_meta_data(image_ids)
+
+        # we need to make sure that the ratings are pulled back before the user can see the new images.
+        self.rating_system.process_undo()
+        self.store_metadata_and_show_images_for_comparison_pair(meta_datas)
+
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         key = event.key()
         if key == QtCore.Qt.Key.Key_Left:
@@ -179,9 +219,13 @@ class Window(QtWidgets.QWidget):
         elif key == QtCore.Qt.Key.Key_Escape:
             self.quit()
             return
+        elif key == QtCore.Qt.Key.Key_Backspace:
+            self.process_undo()
+            return  # return, since we don't want to move on to the next image pair below.
         else:  # ignore this event
             return
 
+        self.store_image_pair_onto_undo_stack(self.left_file_metadata, self.right_file_metadata)
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
 
     def quit(self):

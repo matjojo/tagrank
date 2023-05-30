@@ -7,7 +7,7 @@ TagRank will show you pairs of files, over and over again.
 The more comparisons you make the more it learns your preferences.
 You can stop at any time by pressing the ESCape key, your progress will be saved.
 Press the left arrow if you prefer the left image, the right arrow for the right, and the down arrow if there is no clear winner.
-
+To go back one image pair, press Backspace.
 
 TrueSkill uses these comparisons to create normal distributions for the "quality" of each tag, and a confidence score that says how sure it is of these results.
 TagRank that uses these results to create a representation of this data.
