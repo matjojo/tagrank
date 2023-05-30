@@ -151,8 +151,9 @@ class Window(QtWidgets.QWidget):
         self.rating_system: RatingSystem = rating_system
 
         self.go_back_image_pairs_stack: list[Tuple[int, int]] = []
+        self.comparisons = 0
 
-        self.setWindowTitle("TagRank")
+        self.set_window_title_based_on_comparison_count()
         self.setLayout(QtWidgets.QHBoxLayout())
 
         self.leftImageLabel = QtWidgets.QLabel("left image")
@@ -166,6 +167,9 @@ class Window(QtWidgets.QWidget):
             label.setMinimumHeight(500)
 
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
+
+    def set_window_title_based_on_comparison_count(self):
+        self.setWindowTitle(f"TagRank - Comparisons done this session: {self.comparisons}")
 
     def store_image_pair_onto_undo_stack(self, left_metadata: FileMetaData, right_metadata: FileMetaData):
         left_id = left_metadata["file_id"]
@@ -207,6 +211,9 @@ class Window(QtWidgets.QWidget):
         self.rating_system.process_undo()
         self.store_metadata_and_show_images_for_comparison_pair(meta_datas)
 
+        self.comparisons -= 1
+        self.set_window_title_based_on_comparison_count()
+
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         key = event.key()
         if key == QtCore.Qt.Key.Key_Left:
@@ -224,6 +231,9 @@ class Window(QtWidgets.QWidget):
             return  # return, since we don't want to move on to the next image pair below.
         else:  # ignore this event
             return
+
+        self.comparisons += 1
+        self.set_window_title_based_on_comparison_count()
 
         self.store_image_pair_onto_undo_stack(self.left_file_metadata, self.right_file_metadata)
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
