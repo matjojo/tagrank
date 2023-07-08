@@ -436,6 +436,24 @@ system:limit = 500""".strip():
     query = list(filter(lambda s: s != "", file_query_path.read_text().splitlines()))
 
     relevant_files_ids = client.search_files(query, file_sort_type=hydrus_api.FileSortType.RANDOM)
+    print("THIS IS THE DEBUG INFO RIGHT HERE:")
+
+    print("from API:")
+    print(type(relevant_files_ids))
+    print(relevant_files_ids)
+
+    print("raw:")
+
+    params = {"tags": json.dumps(query, cls=hydrus_api._ABCJSONEncoder)}
+    params["file_sort_type"] = hydrus_api.FileSortType.RANDOM
+
+    response = client._api_request("GET", client._SEARCH_FILES_PATH, params=params)
+
+    print(f"status code: {response.status_code}")
+    print("Response text:")
+    print(response.text)
+    print("THIS WAS THE DEBUG INFO.")
+
     if relevant_files_ids is None or relevant_files_ids["file_ids"] is None or len(relevant_files_ids["file_ids"]) < 2:
         print_no_relevant_files_then_exit(query)
 
