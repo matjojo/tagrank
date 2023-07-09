@@ -213,7 +213,7 @@ class Window(QtWidgets.QWidget):
     def store_metadata_and_show_images_for_comparison_pair(self, metadatas: Tuple[FileMetaData, FileMetaData] | None):
         if metadatas is None:
             print("Was, for any reason, not able to load a pair of files. Shutting down now.")
-            self.quit()
+            self.exit()
             return
 
         self.left_file_metadata, self.right_file_metadata = metadatas
@@ -259,7 +259,7 @@ class Window(QtWidgets.QWidget):
             #       How does that influence the data?
             pass
         elif key == QtCore.Qt.Key.Key_Escape:
-            self.quit()
+            self.exit()
             return
         elif key == QtCore.Qt.Key.Key_Backspace:
             self.process_undo()
@@ -273,11 +273,16 @@ class Window(QtWidgets.QWidget):
         self.store_image_pair_onto_undo_stack(self.left_file_metadata, self.right_file_metadata)
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
 
-    def quit(self):
+    def exit(self) -> None:
+        self.close()  # calls the close event, which will save the results to file
+
+    def closeEvent(self, event) -> None:
+        # this is called by self.close(), and when the window is closed by Qt in any other way.
+        self.prepare_to_quit()
+
+    def prepare_to_quit(self):
         print("Saving results to file...")
         self.rating_system.write_results_to_file()
-        self.close()
-
 
 def print_access_key_info_then_exit() -> NoReturn:
     print("  You need to create a client api service via services->review services->local->client api->add->manually")
