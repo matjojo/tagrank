@@ -2,6 +2,7 @@ import json
 import math
 import random
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Tuple, Any, NoReturn
 
@@ -12,6 +13,37 @@ import matplotlib.pyplot as plt  # type: ignore
 import scipy.stats as stats  # type: ignore
 from trueskill import Rating, rate  # type: ignore
 import numpy as np
+
+h_api_version = version('hydrus_api')
+
+if h_api_version is None:
+    # cannot check version for some reason.
+    pass
+elif len(h_api_version.split(".")) < 3:
+    # Version is in a weird format. Ignore.
+    pass
+else:
+    try:
+        major: str
+        minor: str
+        patch: str
+
+        major, minor, patch = h_api_version.split(".")
+        if int(major) < 5:
+            print("Your hydrus_api version is not up to date!")
+            print(f"Tagrank is seeing version {h_api_version}, but requires at least version 5.0.0.")
+            print("You can update your hydrus_api version with the command `pip install --upgrade hydrus_api`.")
+            print("If you have done so, tagrank is up to date, and this error still comes up please make a report on github or on discord.")
+            print("Be sure to include the output of `pip freeze` and the error message you are now reading.")
+            sys.exit(1)
+
+    except ValueError:
+        # failed to unpack. Ignore.
+        pass
+
+    # we could do more with the minor or patch versions as well,
+    # and then build up some table of compatible `hydrus_api`, `hydrus`, and `tagrank` versions.
+    # that does not seem worth the effort for now, but if we get a lot more issues like this we may do so.
 
 DEFAULT_FILE_QUERY = ["system:number of tags > 5", "system:filetype = image", "system:limit = 5000"]
 AMOUNT_OF_TAGS_IN_CHARTS = 20
