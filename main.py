@@ -249,11 +249,11 @@ class Window(QtWidgets.QWidget):
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         key = event.key()
-        if key == QtCore.Qt.Key.Key_Left:
+        if key == QtCore.Qt.Key.Key_Left or key == QtCore.Qt.Key.Key_A:
             self.rating_system.process_result(winner=self.left_file_metadata, loser=self.right_file_metadata)
-        elif key == QtCore.Qt.Key.Key_Right:
+        elif key == QtCore.Qt.Key.Key_Right or key == QtCore.Qt.Key.Key_D:
             self.rating_system.process_result(winner=self.right_file_metadata, loser=self.left_file_metadata)
-        elif key == QtCore.Qt.Key.Key_Down:
+        elif key == QtCore.Qt.Key.Key_Down or key == QtCore.Qt.Key.Key_S:
             # print("No clear winner.")
             # TODO: Maybe we want to process draws as well? (TrueSkill supports that.)
             #       How does that influence the data?
@@ -261,7 +261,7 @@ class Window(QtWidgets.QWidget):
         elif key == QtCore.Qt.Key.Key_Escape:
             self.exit()
             return
-        elif key == QtCore.Qt.Key.Key_Backspace:
+        elif key == QtCore.Qt.Key.Key_Backspace or key == QtCore.Qt.Key.Key_R:
             self.process_undo()
             return  # return, since we don't want to move on to the next image pair below.
         else:  # ignore this event
