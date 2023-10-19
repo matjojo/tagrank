@@ -19,6 +19,7 @@ If you want to do more with this data you can read it from the `ratings.json` fi
 This is a json list of `[tag_name, [mu, sigma]]` objects.
 `mu` and `sigma` are the parameters for the normal distribution of that tags ranking.
 
+TagRank stores a list of your previous comparisons in the `comparisons.json` file. It contains a list of lists with two file ids. First the winning id, then the losing id. It is possible that some pairs are in this list multiple times, and even in different orders. Since the list is in-order the last comparison between two file ids is the most recent. 
 
 ## Installation
 - Clone the repository or download the repository in another way.

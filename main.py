@@ -5,6 +5,7 @@ import os
 import random
 import sys
 from importlib.metadata import version
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Tuple, Any, NoReturn
 
@@ -70,9 +71,26 @@ class RatingSystem:
 
         self.go_back_ratings_stack: list[dict[str, Rating]] = []
 
+        # where the winner is the first of the two file ids
+        self.known_comparison_choices: list[Tuple[int, int]] = []
+
+        if Path("./comparisons.json").exists():  # if not exists, will be made on exit.
+            try:
+                with open(Path("./comparisons.json")) as f:
+                    comparisons = json.loads(f.read())
+                    for winner, loser in comparisons:
+                        self.known_comparison_choices.append((winner, loser))
+            except (JSONDecodeError, ValueError) as e:
+                print_could_not_read_comparisons_file_help()
+                raise e
+
     def process_undo(self):
         try:
             last_ratings = self.go_back_ratings_stack.pop()
+
+            # if the above pop throws this will not happen.
+            # This is good, since it ensures that we do not remove comparisons not made in this session,
+            self.known_comparison_choices.pop()
         except IndexError:
             return  # nothing to return to.
 
@@ -82,6 +100,9 @@ class RatingSystem:
     def write_results_to_file(self):
         with open(Path("./ratings.json"), "w") as f:
             f.write(json.dumps([(tag, [rating.mu, rating.sigma]) for tag, rating in self.current_ratings.items()]))
+
+        with open(Path("./comparisons.json"), "w") as f:
+            f.write(json.dumps([[first, second] for first, second in self.known_comparison_choices]))
 
     def get_file_pair(self) -> None | Tuple[FileMetaData, FileMetaData]:
         ids: list[int] = random.sample(self.file_ids, k=2)
@@ -151,6 +172,8 @@ class RatingSystem:
             self.current_ratings[tag] = new_rating
 
         self.go_back_ratings_stack.append(go_back_ratings)
+
+        self.known_comparison_choices.append((winner["file_id"], loser["file_id"]))
 
     # noinspection PyMethodMayBeStatic
     def tags_from_file(self, file: FileMetaData) -> list[str]:
@@ -307,6 +330,16 @@ class Window(QtWidgets.QWidget):
     def prepare_to_quit(self):
         print("Saving results to file...")
         self.rating_system.write_results_to_file()
+
+
+def print_could_not_read_comparisons_file_help() -> None:
+    print(f"ERROR: Was not able to read your comparisons.json file!")
+    print(f"  The reason for this will be printed above, or below this information.")
+    print(f"  If you do not know what the reason means you should do the following:")
+    print(f"  1. Rename the file {Path('./comparisons.json').resolve()} to something else.")
+    print(f"  2. Show the error and the file to me in the hydrus discord if you want to recover the comparisons.")
+    print(f"  3. Re-open TagRank, it will start your comparisons list from new.", flush=True)
+
 
 def print_access_key_info_then_exit() -> NoReturn:
     print("  You need to create a client api service via services->review services->local->client api->add->manually")
