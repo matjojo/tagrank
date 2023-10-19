@@ -1,5 +1,7 @@
+import contextlib
 import json
 import math
+import os
 import random
 import sys
 from importlib.metadata import version
@@ -264,6 +266,9 @@ class Window(QtWidgets.QWidget):
         elif key == QtCore.Qt.Key.Key_Backspace or key == QtCore.Qt.Key.Key_R:
             self.process_undo()
             return  # return, since we don't want to move on to the next image pair below.
+        elif key == QtCore.Qt.Key.Key_O:
+            self.open_files_externally()
+            return  # return, since we don't want to move on to the next image pair below.
         else:  # ignore this event
             return
 
@@ -272,6 +277,25 @@ class Window(QtWidgets.QWidget):
 
         self.store_image_pair_onto_undo_stack(self.left_file_metadata, self.right_file_metadata)
         self.store_metadata_and_show_images_for_comparison_pair(self.rating_system.get_file_pair())
+
+    def open_files_externally(self) -> None:
+        # user asked us to open these files in another program.
+        file_path_right = "file://" + str(self.rating_system.path_from_metadata(self.right_file_metadata).resolve())
+        file_path_left = "file://" + str(self.rating_system.path_from_metadata(self.left_file_metadata).resolve())
+
+        try:
+            # only available on windows. wew
+            os.startfile(file_path_left)
+            os.startfile(file_path_right)
+        except AttributeError:
+            # does not always work, so we try the python way first.
+            with contextlib.redirect_stdout:
+                # need to redirect since some browsers (Vivaldi, and thus I assume chromium)
+                # will print which browser "session" they open in for each file.
+                # cool information, but not relevant for our user.
+
+                QtGui.QDesktopServices.openUrl(file_path_left)
+                QtGui.QDesktopServices.openUrl(file_path_right)
 
     def exit(self) -> None:
         self.close()  # calls the close event, which will save the results to file
