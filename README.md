@@ -15,6 +15,10 @@ TagRank that uses these results to create a representation of this data.
 When you are done rating games TagRank will show you the top 20 tags and their skill distributions.
 The more to the right the distribution for a tag is the better, and the higher it is the more sure TagRank is of that ranking. 
 
+## Sorting files with your ranked tags
+TagRank can also create a sort order for all your images based on the tag rankings that you have created. The more images you rank the better this sort order will be. To do this, run `main.py --create_image_ranking`.
+
+## Using the tag-ranks in your own code
 If you want to do more with this data you can read it from the `ratings.json` file that TagRank creates.
 This is a json list of `[tag_name, [mu, sigma]]` objects.
 `mu` and `sigma` are the parameters for the normal distribution of that tags ranking.
