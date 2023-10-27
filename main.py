@@ -55,6 +55,19 @@ AMOUNT_OF_TAGS_IN_CHARTS = 20
 
 FileMetaData = dict[str, Any]
 
+try:
+    from itertools import batched  # introduced in 3.12
+except ImportError:
+
+    # taken from https://docs.python.org/3/library/itertools.html#itertools.batched
+    def batched(iterable, n):
+        # batched('ABCDEFG', 3) --> ABC DEF G
+        if n < 1:
+            raise ValueError('n must be at least one')
+        it = iter(iterable)
+        while batch := list(itertools.islice(it, n)):
+            yield batch
+
 
 def tags_from_file(file: FileMetaData) -> list[str]:
     # dict of tag repos that may have some tag info.
@@ -643,15 +656,9 @@ def delete_existing_sort_tags_if_needed(client: hydrus_api.Client) -> None:
 
     print("You still have files with the TagRankSort tags from an earlier sort attempt!")
 
-    still_has_tags_response = client.get_file_metadata(file_ids=response["file_ids"])
-    if still_has_tags_response is None or still_has_tags_response["metadata"] is None:
-        print("ERROR: Was not able to get the data to delete the existing ranking tags.")
-        print("  Are you sure I have the required permissions?")
-        print("  Otherwise, is TagRank maybe out of date compared to your hydrus version?")
-        sys.exit(0)
+    still_has_tags_response = get_file_infos_from_client(client, response["file_ids"])
 
-    for metadata in still_has_tags_response["metadata"]:
-        file_id = metadata["file_id"]
+    for (file_id, metadata) in still_has_tags_response:
         for (tag_repo_identifier, tag_repo_data) in metadata["tags"].items():
             if "0" not in tag_repo_data["display_tags"]:
                 continue
@@ -663,6 +670,35 @@ def delete_existing_sort_tags_if_needed(client: hydrus_api.Client) -> None:
                     tag_repo_identifier: {hydrus_api.TagAction.DELETE: previous_sort_tags}})
 
     print("Existing sort tags deleted.")
+
+
+GET_FILE_INFO_FROM_CLIENT_CHUNK_SIZE = 1000
+
+
+def get_file_infos_from_client(client: hydrus_api.Client, file_ids: list[int]) -> list[Tuple[int, FileMetaData]]:
+    file_ids_to_tags: list[Tuple[int, FileMetaData]] = []
+
+    def get_and_process_one_chunk(chunk_of_ids: list[int]):
+        file_infos_response = client.get_file_metadata(file_ids=chunk_of_ids)
+        if file_infos_response is None or file_infos_response["metadata"] is None:
+            print_could_not_fetch_file_information_then_exit()
+
+        file_ids_to_tags.extend((info["file_id"], info) for info in file_infos_response["metadata"])
+
+    if len(file_ids) < GET_FILE_INFO_FROM_CLIENT_CHUNK_SIZE:
+        get_and_process_one_chunk(file_ids)
+        return file_ids_to_tags
+
+    chunks = math.ceil(len(file_ids) / GET_FILE_INFO_FROM_CLIENT_CHUNK_SIZE)
+    print(f"Getting file info from the client in {chunks} chunks.")
+    print("Chunks done: 0", end="")
+
+    for (index, id_batch) in enumerate(batched(file_ids, GET_FILE_INFO_FROM_CLIENT_CHUNK_SIZE), start=1):
+        get_and_process_one_chunk(id_batch)
+        print(f"\rChunks done: {index}", end="", flush=True)
+
+    print("\rChunks done: ALL")
+    return file_ids_to_tags
 
 
 def run_for_create_image_ranking(client: hydrus_api.Client) -> None:
@@ -686,11 +722,7 @@ def run_for_create_image_ranking(client: hydrus_api.Client) -> None:
 
     print(f"Found {len(file_ids)} files that have at least one ranked tag.")
 
-    file_infos_response = client.get_file_metadata(file_ids=file_ids)
-    if file_infos_response is None or file_infos_response["metadata"] is None:
-        print_could_not_fetch_file_information_then_exit()
-
-    file_ids_to_tags: list[Tuple[int, list[str]]] = [(metadata["file_id"], tags_from_file(metadata)) for metadata in file_infos_response["metadata"]]
+    file_ids_to_tags: list[Tuple[int, list[str]]] = [(file_id, tags_from_file(metadata)) for (file_id, metadata) in get_file_infos_from_client(client, file_ids)]
 
     print("Got the tags for each file from the client.")
 
