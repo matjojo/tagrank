@@ -761,6 +761,9 @@ def run_for_create_image_ranking(client: hydrus_api.Client) -> None:
     print("  Now, if you want to set this as the default sort: go to: file -> options -> sort/collect.")
     print("  Click the first button to the right of the text 'Default File Sort'")
     print("  Here, select Namespaces, and click the 'sort by tags: TagRankSort' option that you just created.")
+    print()
+
+    input("Press Enter to exit...")
 
 
 def main(mode: str) -> None:
